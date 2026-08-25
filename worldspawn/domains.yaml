@@ -1,0 +1,20 @@
+# sprites: everything that lives in the world and ticks every cycle.
+# Objects land in core.sprites (the dict the main loop walks) and in the dict
+# named after their prefab folder, so core.players / core.tiles / core.uis all
+# stay usable as groups.
+sprites:
+  create-static-getter: true
+  create-dynamic-getter: true
+  # self(core),object,id
+  add-function: |
+    super(Core,self).addObjectByID(object,id)
+  # self(core),object,id
+  remove-function: |
+    super(Core,self).removeObjectByID(id)
+
+# static: plain data classes that are never added to the world, only looked up.
+# This is what gives the engine core.getItems(name), which the built-in
+# inventory relies on to clear a slot.
+static:
+  create-static-getter: true
+  create-dynamic-getter: false

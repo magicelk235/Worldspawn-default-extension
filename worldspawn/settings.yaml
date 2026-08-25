@@ -1,4 +1,9 @@
-name: "worldspawn"
-version: v1.0.0
-author: "Magicelk235"
-alwaysEnabled: True
+name: worldspawn
+version: 2.0.0
+author: Magicelk235
+description: Default Worldspawn content - players, tiles, inventory UI and items.
+dependencies: []
+used-domains:
+  - sprites
+  - static
+always-enabled: true
