@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from data.sprites import uiObject
 from data.sprites.sprite import SpriteData
 from data.spatial.hitbox import Hitbox
@@ -35,8 +37,12 @@ class UI(uiObject.UIObject):
         self.objectData = SpriteData(Hitbox(1, 1), {"default": self.defaultAnimation()})
 
     def defaultAnimation(self):
+        # a widget with no art of its own draws nothing, rather than the
+        # engine's missing-texture marker: items/none is fully transparent
+        from data.emitters.image import ImageData
         from data.sprites.sprite import Animation
-        return Animation()
+        return Animation(ImageData(path="items/none", scaleSize=(1, 1),
+                                   renderOrder=BACKGROUND))
 
     @staticmethod
     def clientKeys(*extra):
@@ -65,6 +71,48 @@ class UI(uiObject.UIObject):
         self.interactivePlayers = set(controllers)
 
     @property
+    def renderOrder(self):
+        return self.image.renderOrder
+
+    @renderOrder.setter
+    def renderOrder(self, renderOrder):
+        """Move every frame of this widget into a band.
+
+        Which band a widget belongs in is decided by whoever builds it, so it
+        arrives as a constructor argument rather than a class attribute, and
+        that makes it one of the things a client cannot work out on its own.
+        A widget that streams it applies it to all of its animations: the
+        pressed frame of a button sits in the same band as the idle one.
+        """
+        for animation in self.objectData.animations.values():
+            animation.imageData = replace(animation.imageData,
+                                          renderOrder=renderOrder)
+        self.image.setImageData(self.getCurrentAnimation().getImageData())
+
+    @property
+    def scale(self):
+        """Box the art is squeezed into, or None when it is drawn as drawn."""
+        scaleSize = self.getCurrentAnimation().getImageData().scaleSize
+        return None if scaleSize == -1 else list(scaleSize)
+
+    @scale.setter
+    def scale(self, scale):
+        """Re-apply the size the art was asked for, and follow it with the box.
+
+        The scale is baked into the ImageData when the widget is built, so a
+        client that rebuilt it with cls(core, pos) is left with whatever its
+        own defaults gave it. The hitbox comes off the pixels afterwards for
+        the same reason it does anywhere else: the box that gets clicked has
+        to be the box that was drawn.
+        """
+        scaleSize = -1 if scale == None else tuple(scale)
+        for animation in self.objectData.animations.values():
+            animation.imageData = replace(animation.imageData,
+                                          scaleSize=scaleSize)
+        self.image.setImageData(self.getCurrentAnimation().getImageData())
+        self.resize(*self.image.size)
+
+    @property
     def authoritative(self):
         """True when this side owns the widget and may build its children.
 
@@ -90,18 +138,6 @@ class UI(uiObject.UIObject):
 
     def resize(self, w, h):
         self.size = (w, h)
-
-    def remove(self):
-        for part in list(self.uiParts):
-            part.remove()
-            self.removeUiPart(part)
-
-    def __del__(self):
-        # The engine's UIObject unregisters its parts here. Teardown in this
-        # package is explicit through remove(); doing it from the collector
-        # means mutating the core's id tables at an arbitrary point, which
-        # blows up when the parts were already removed with their parent.
-        pass
 
 
 def getObject():

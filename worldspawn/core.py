@@ -95,6 +95,27 @@ class WorldSpawn:
                 ids.append(self.addObject(tile(self, pos)))
         return ids
 
+    # persistence
+
+    def saveState(self):
+        # nothing of this package's own to keep, but the entry has to exist
+        # for loadWorld to call loadState back
+        return {}
+
+    def loadState(self, state):
+        """Make sure whoever loaded the world has a character in it.
+
+        A save can come from another machine, or the one sprite that failed
+        to restore can be the player. Core.main points the camera at
+        core.userID and draws nothing at all when that id holds no sprite.
+        """
+        if self.mode == self.Mode.join:
+            return
+        if self.localPlayerID not in self.inputMangers:
+            self.addInputManager(self.localPlayerID)
+        self.userID = self.localPlayerID
+        self.spawnPlayer(self.localPlayerID)
+
     # networking
 
     def filterVisible(self, clientID, sprites):
